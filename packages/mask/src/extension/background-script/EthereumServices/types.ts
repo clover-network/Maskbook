@@ -9,9 +9,8 @@ export interface ProviderOptions {
 }
 
 export interface Web3Options {
-    chainId?: ChainId
     keys?: string[]
-    url?: string
+    options?: ProviderOptions
 }
 
 export interface Provider {

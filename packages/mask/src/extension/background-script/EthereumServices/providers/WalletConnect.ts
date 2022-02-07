@@ -78,9 +78,9 @@ export class WalletConnectProvider implements Provider {
         throw new Error('Method not implemented.')
     }
 
-    async createWeb3({ chainId }: Web3Options): Promise<Web3> {
+    async createWeb3(options: Web3Options): Promise<Web3> {
         const provider = new MaskWalletProvider()
-        return provider.createWeb3({ chainId })
+        return provider.createWeb3(options)
     }
 
     async requestAccounts() {

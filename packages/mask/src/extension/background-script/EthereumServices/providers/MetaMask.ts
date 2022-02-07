@@ -72,9 +72,11 @@ export class MetaMaskProvider implements Provider {
     }
 
     async createWeb3() {
+        if (this.web3) return this.web3
+
         const provider = (await this.createProvider()) as Web3Provider
-        if (!this.web3) this.web3 = new Web3(provider)
-        else this.web3.setProvider(provider)
+        this.web3 = new Web3(provider)
+        this.web3.setProvider(provider)
         return this.web3
     }
 

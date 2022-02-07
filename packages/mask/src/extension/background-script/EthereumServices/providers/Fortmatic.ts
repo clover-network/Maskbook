@@ -10,10 +10,10 @@ import type { Provider } from '../types'
 // #region redirect requests to the content page
 let id = 0
 
-async function request(requestArguments: RequestArguments) {
+async function request<T>(requestArguments: RequestArguments) {
     id += 1
     const requestId = id
-    const [deferred, resolve, reject] = defer<any, Error | null>()
+    const [deferred, resolve, reject] = defer<T, Error | null>()
 
     function onResponse({ payload, result, error }: EVM_Messages['FORTMATIC_PROVIDER_RPC_RESPONSE']) {
         if (payload.id !== requestId) return
@@ -72,19 +72,19 @@ export class FortmaticProvider implements Provider {
     }
     async createWeb3() {
         if (this.web3) return this.web3
-        this.web3 = new Web3(await this.createProvider())
+        const provider = await this.createProvider()
+        this.web3 = new Web3(provider)
         return this.web3
     }
     async requestAccounts(chainId = ChainId.Mainnet) {
         const provider = await this.createProvider()
-        const response = await provider.request({
+        return provider.request<{
+            chainId: ChainId
+            accounts: string[]
+        }>({
             method: EthereumMethodType.MASK_LOGIN_FORTMATIC,
             params: [chainId],
         })
-        return response as {
-            chainId: ChainId
-            accounts: string[]
-        }
     }
     async dismissAccounts(chainId = ChainId.Mainnet) {
         const provider = await this.createProvider()
@@ -92,6 +92,6 @@ export class FortmaticProvider implements Provider {
             method: EthereumMethodType.MASK_LOGOUT_FORTMATIC,
             params: [chainId],
         })
-        resetAccount()
+        await resetAccount()
     }
 }

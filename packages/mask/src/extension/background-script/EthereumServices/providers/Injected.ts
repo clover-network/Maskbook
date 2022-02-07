@@ -9,10 +9,10 @@ import type { Provider } from '../types'
 // #region redirect requests to the content page
 let id = 0
 
-async function request(requestArguments: RequestArguments) {
+async function request<T>(requestArguments: RequestArguments) {
     id += 1
     const requestId = id
-    const [deferred, resolve, reject] = defer<any, Error | null>()
+    const [deferred, resolve, reject] = defer<T, Error | null>()
 
     function onResponse({ payload, result, error }: EVM_Messages['INJECTED_PROVIDER_RPC_RESPONSE']) {
         if (payload.id !== requestId) return

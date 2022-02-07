@@ -1,4 +1,4 @@
-import MaskWallet from 'web3'
+import Web3 from 'web3'
 import type { HttpProvider } from 'web3-core'
 import { PopupRoutes } from '@masknet/shared-base'
 import { ChainId, getChainRPC, ProviderType } from '@masknet/web3-shared-evm'
@@ -10,46 +10,46 @@ import type { Provider, ProviderOptions, Web3Options } from '../types'
 export class MaskWalletProvider implements Provider {
     private seed = Math.floor(Math.random() * 4)
     private providerPool = new Map<string, HttpProvider>()
-    private instancePool = new Map<string, MaskWallet>()
+    private instancePool = new Map<string, Web3>()
 
     private createWeb3Instance(provider: HttpProvider) {
-        return (
-            this.instancePool.get(provider.host) ??
-            (() => {
-                const newInstance = new MaskWallet(provider)
-                this.instancePool.set(provider.host, newInstance)
-                return newInstance
-            })()
-        )
+        const instance = this.instancePool.get(provider.host)
+        if (instance) return instance
+
+        const newInstance = new Web3(provider)
+        this.instancePool.set(provider.host, newInstance)
+        return newInstance
     }
 
-    async createProvider({ url = '' }: ProviderOptions) {
-        if (!url) throw new Error('Invalid provider url.')
-        const provider =
-            this.providerPool.get(url) ??
-            new MaskWallet.providers.HttpProvider(url, {
-                timeout: 3 * 1000, // ms
-                // @ts-ignore
-                clientConfig: {
-                    keepalive: true,
-                    keepaliveInterval: 1, // ms
-                },
-                reconnect: {
-                    auto: true,
-                    delay: 5000, // ms
-                    maxAttempts: Number.MAX_SAFE_INTEGER,
-                    onTimeout: true,
-                },
-            })
-        this.providerPool.set(url, provider)
-        return provider
-    }
+    async createProvider({
+        chainId = currentChainIdSettings.value,
+        url = getChainRPC(chainId, this.seed),
+    }: ProviderOptions) {
+        if (!url) throw new Error('Failed to create provider.')
 
-    async createWeb3({ chainId = currentChainIdSettings.value, keys = [], url }: Web3Options) {
-        const provider = await this.createProvider({
-            chainId,
-            url: url || getChainRPC(chainId, this.seed),
+        const provider = this.providerPool.get(url)
+        if (provider) return provider
+
+        const newProvider = new Web3.providers.HttpProvider(url, {
+            timeout: 30 * 1000, // ms
+            // @ts-ignore
+            clientConfig: {
+                keepalive: true,
+                keepaliveInterval: 1, // ms
+            },
+            reconnect: {
+                auto: true,
+                delay: 5000, // ms
+                maxAttempts: Number.MAX_SAFE_INTEGER,
+                onTimeout: true,
+            },
         })
+        this.providerPool.set(url, newProvider)
+        return newProvider
+    }
+
+    async createWeb3({ keys = [], options = {} }: Web3Options) {
+        const provider = await this.createProvider(options)
         const web3 = this.createWeb3Instance(provider)
         if (keys.length) {
             web3.eth.accounts.wallet.clear()
@@ -59,11 +59,12 @@ export class MaskWalletProvider implements Provider {
     }
 
     async requestAccounts(chainId?: ChainId) {
-        const wallets = await getWallets(ProviderType.MaskWallet)
         return new Promise<{
             chainId: ChainId
             accounts: string[]
         }>(async (resolve, reject) => {
+            const wallets = await getWallets(ProviderType.MaskWallet)
+
             try {
                 await selectAccountPrepare((accounts, chainId) => {
                     resolve({

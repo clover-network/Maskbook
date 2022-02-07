@@ -54,14 +54,14 @@ export function InjectedProviderBridge(props: InjectedProviderBridgeProps) {
     useEffect(() => {
         return bridgedProvider.on('accountsChanged', async (event) => {
             if (!isInjectedProvider(providerType)) return
-            Services.Ethereum.notifyEvent(providerType, 'accountsChanged', event)
+            await Services.Ethereum.notifyEvent(providerType, 'accountsChanged', event)
         })
     }, [providerType, bridgedProvider])
 
     useEffect(() => {
-        return bridgedProvider.on('chainChanged', (event) => {
+        return bridgedProvider.on('chainChanged', async (event) => {
             if (!isInjectedProvider(providerType)) return
-            Services.Ethereum.notifyEvent(providerType, 'chainChanged', event)
+            await Services.Ethereum.notifyEvent(providerType, 'chainChanged', event)
         })
     }, [providerType, bridgedProvider])
 

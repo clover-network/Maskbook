@@ -32,8 +32,10 @@ export function createWeb3(
     const provider = getProvider(providerType)
     return (
         provider?.createWeb3({
-            chainId,
             keys,
+            options: {
+                chainId,
+            },
         }) ?? null
     )
 }
@@ -123,10 +125,10 @@ export async function notifyEvent(providerType: ProviderType, name: string, even
 
     switch (name) {
         case 'accountsChanged':
-            await provider?.onAccountsChanged?.(event as string[], providerType)
+            await provider?.onAccountsChanged?.(event as string[])
             break
         case 'chainChanged':
-            await provider?.onChainIdChanged?.(event as string, providerType)
+            await provider?.onChainIdChanged?.(event as string)
             break
         default:
             throw new Error(`Unknown event name: ${name}.`)
