@@ -15,6 +15,7 @@ import { EntrySecondLevelDialog } from './EntrySecondLevelDialog'
 import { NetworkTab } from './NetworkTab'
 import { SavingsDialog } from '../../plugins/Savings/SNSAdaptor/SavingsDialog'
 import { TraderDialog } from '../../plugins/Trader/SNSAdaptor/trader/TraderDialog'
+import { PluginTipMessages } from '../../plugins/Tip/messages'
 import { NetworkPluginID, PluginId, usePluginIDContext } from '@masknet/plugin-infra'
 import { FindTrumanDialog } from '../../plugins/FindTruman/SNSAdaptor/FindTrumanDialog'
 
@@ -162,6 +163,8 @@ export function ApplicationBoard({ secondEntries, secondEntryChainTabs }: MaskAp
     // #region pet friends
     const { setDialog: setPetDialog } = useRemoteControlledDialog(PluginPetMessages.events.essayDialogUpdated)
     // #endregion
+
+    const { openDialog: openTipDialog } = useRemoteControlledDialog(PluginTipMessages.tipDialogUpdated)
 
     // #region second level entry dialog
     const {
@@ -394,6 +397,7 @@ export function ApplicationBoard({ secondEntries, secondEntryChainTabs }: MaskAp
                             </div>
                         ) : null,
                 )}
+                <div onClick={openTipDialog}>open tip</div>
             </section>
             {isClaimAllDialogOpen ? <ClaimAllDialog open onClose={onClaimAllDialogClose} /> : null}
             {isSecondLevelEntryDialogOpen ? (
