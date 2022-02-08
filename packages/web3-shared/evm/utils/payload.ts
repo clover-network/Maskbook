@@ -15,6 +15,16 @@ export function getPayloadId(payload: JsonRpcPayload) {
     return typeof payload.id === 'string' ? Number.parseInt(payload.id, 10) : payload.id
 }
 
+export function getPayloadFrom(payload: JsonRpcPayload) {
+    const config = getPayloadConfig(payload)
+    return config?.from as string | undefined
+}
+
+export function getPayloadTo(payload: JsonRpcPayload) {
+    const config = getPayloadConfig(payload)
+    return config?.to as string | undefined
+}
+
 export function getPayloadChainId(payload: JsonRpcPayload) {
     switch (payload.method) {
         // here are methods that contracts may emit

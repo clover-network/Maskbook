@@ -10,7 +10,7 @@ import { FortmaticProvider } from './providers/Fortmatic'
 import type { Provider } from './types'
 import { currentChainIdSettings, currentProviderSettings } from '../../../plugins/Wallet/settings'
 
-export const getProvider = createLookupTableResolver<ProviderType, Provider | null>(
+const getProvider = createLookupTableResolver<ProviderType, Provider | null>(
     {
         [ProviderType.MaskWallet]: new MaskWalletProvider(),
         [ProviderType.MetaMask]: new MetaMaskProvider(),

@@ -1,7 +1,7 @@
 import type Web3 from 'web3'
 import type { RequestArguments } from 'web3-core'
 import type { JsonRpcPayload, JsonRpcResponse } from 'web3-core-helpers'
-import type { ChainId, ProviderType } from '@masknet/web3-shared-evm'
+import type { ChainId, SendOverrides, RequestOptions } from '@masknet/web3-shared-evm'
 
 export interface ProviderOptions {
     chainId?: ChainId
@@ -23,10 +23,27 @@ export interface Provider {
     }>
     dismissAccounts?(chainId?: ChainId): Promise<void>
 
-    ensureConnectedAndUnlocked?(): Promise<void>
-
     onAccountsChanged?(accounts: string[]): Promise<void>
     onChainIdChanged?(id: string): Promise<void>
+}
+
+export interface Context {
+    readonly payload: JsonRpcPayload
+    readonly response: JsonRpcResponse | void
+    result: unknown
+    error: Error | null
+    readonly sendOverrides: SendOverrides | void
+    readonly requestOptions: RequestOptions | void
+
+    getResponse: (callback: (error: Error | null, response?: JsonRpcResponse) => void) => void
+    setResponse: (error: Error | null, response?: JsonRpcResponse) => void
+
+    setError: (error: Error) => void
+    setResult: (result: unknown) => void
+}
+
+export interface Middleware<T> {
+    fn: (context: T, next: () => Promise<void>) => Promise<void>
 }
 
 export interface Interceptor {
