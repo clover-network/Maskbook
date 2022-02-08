@@ -1,73 +1,49 @@
 import Web3 from 'web3'
 import type { RequestArguments } from 'web3-core'
-import type { JsonRpcPayload, JsonRpcResponse } from 'web3-core-helpers'
 import { defer } from '@masknet/shared-base'
-import { EthereumMethodType } from '@masknet/web3-shared-evm'
+import { createExternalProvider, EthereumMethodType } from '@masknet/web3-shared-evm'
 import { EVM_Messages } from '../../../../plugins/EVM/messages'
 import type { Provider } from '../types'
 
-// #region redirect requests to the content page
-let id = 0
-
-async function request<T>(requestArguments: RequestArguments) {
-    id += 1
-    const requestId = id
-    const [deferred, resolve, reject] = defer<T, Error | null>()
-
-    function onResponse({ payload, result, error }: EVM_Messages['INJECTED_PROVIDER_RPC_RESPONSE']) {
-        if (payload.id !== requestId) return
-        if (error) reject(error)
-        else resolve(result)
-    }
-
-    setTimeout(
-        () => reject(new Error('The request is timeout.')),
-        requestArguments.method === EthereumMethodType.ETH_REQUEST_ACCOUNTS ? 3 * 60 * 1000 : 45 * 1000,
-    )
-    EVM_Messages.events.INJECTED_PROVIDER_RPC_RESPONSE.on(onResponse)
-    EVM_Messages.events.INJECTED_PROVIDER_RPC_REQUEST.sendToVisiblePages({
-        payload: {
-            jsonrpc: '2.0',
-            id: requestId,
-            params: [],
-            ...requestArguments,
-        },
-    })
-
-    deferred.finally(() => {
-        EVM_Messages.events.INJECTED_PROVIDER_RPC_RESPONSE.off(onResponse)
-    })
-
-    return deferred
-}
-
-function send(payload: JsonRpcPayload, callback: (error: Error | null, response?: JsonRpcResponse) => void) {
-    request({
-        method: payload.method,
-        params: payload.params,
-    })
-        .then((result) => {
-            callback(null, {
-                id: payload.id as number,
-                jsonrpc: '2.0',
-                result,
-            })
-        })
-        .catch((error) => {
-            callback(error)
-        })
-}
-// #endregion
-
 export class InjectedProvider implements Provider {
+    private id = 0
     private web3: Web3 | null = null
 
-    async createProvider() {
-        return {
-            request,
-            send,
-            sendAsync: send,
+    private async request<T>(requestArguments: RequestArguments) {
+        this.id += 1
+        const requestId = this.id
+        const [deferred, resolve, reject] = defer<T, Error | null>()
+
+        function onResponse({ payload, result, error }: EVM_Messages['INJECTED_PROVIDER_RPC_RESPONSE']) {
+            if (payload.id !== requestId) return
+            if (error) reject(error)
+            else resolve(result)
         }
+
+        const timer = setTimeout(
+            () => reject(new Error('The request is timeout.')),
+            requestArguments.method === EthereumMethodType.ETH_REQUEST_ACCOUNTS ? 3 * 60 * 1000 : 45 * 1000,
+        )
+        EVM_Messages.events.INJECTED_PROVIDER_RPC_RESPONSE.on(onResponse)
+        EVM_Messages.events.INJECTED_PROVIDER_RPC_REQUEST.sendToVisiblePages({
+            payload: {
+                jsonrpc: '2.0',
+                id: requestId,
+                params: [],
+                ...requestArguments,
+            },
+        })
+
+        deferred.finally(() => {
+            clearTimeout(timer)
+            EVM_Messages.events.INJECTED_PROVIDER_RPC_RESPONSE.off(onResponse)
+        })
+
+        return deferred
+    }
+
+    async createProvider() {
+        return createExternalProvider(this.request.bind(this))
     }
 
     async createWeb3() {

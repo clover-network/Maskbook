@@ -1,16 +1,52 @@
-import { first } from 'lodash-unified'
-import type Web3 from 'web3'
+import Web3 from 'web3'
 import type { JsonRpcResponse } from 'web3-core-helpers'
+import { first } from 'lodash-unified'
 import WalletConnect from '@walletconnect/client'
 import type { IJsonRpcRequest } from '@walletconnect/types'
-import { ProviderType, ChainId } from '@masknet/web3-shared-evm'
-import { MaskWalletProvider } from './MaskWallet'
+import {
+    ProviderType,
+    ChainId,
+    EthereumMethodType,
+    createExternalProvider,
+    createPayload,
+} from '@masknet/web3-shared-evm'
 import { resetAccount, updateAccount } from '../../../../plugins/Wallet/services'
 import { currentProviderSettings } from '../../../../plugins/Wallet/settings'
-import type { ExternalProvider, Provider, Web3Options } from '../types'
+import type { Provider, Web3Options } from '../types'
+import type { RequestArguments } from 'web3-core'
 
 export class WalletConnectProvider implements Provider {
+    private id = 0
     private connector: WalletConnect | null = null
+    private web3: Web3 | null = null
+
+    private async signPersonalMessage(data: string, address: string, password: string) {
+        if (!this.connector) throw new Error('Connection Lost.')
+        return (await this.connector.signPersonalMessage([data, address, password])) as string
+    }
+
+    private async sendCustomRequest(payload: IJsonRpcRequest) {
+        if (!this.connector) throw new Error('Connection Lost.')
+        return (await this.connector.sendCustomRequest(payload as IJsonRpcRequest)) as JsonRpcResponse
+    }
+
+    private async request<T>(requestArguments: RequestArguments) {
+        this.id += 1
+
+        const requestId = this.id
+        const { method, params } = requestArguments
+
+        switch (method) {
+            case EthereumMethodType.PERSONAL_SIGN:
+                const [data, address] = params as [string, string]
+                return this.signPersonalMessage(data, address, '') as unknown as T
+            case EthereumMethodType.ETH_SEND_TRANSACTION:
+                const response = await this.sendCustomRequest(createPayload(requestId, method, params))
+                return response.result as T
+            default:
+                throw new Error('Not implemented.')
+        }
+    }
 
     /**
      * Create a new connector and destroy the previous one if exists
@@ -74,13 +110,15 @@ export class WalletConnectProvider implements Provider {
         })
     }
 
-    createProvider(): Promise<ExternalProvider> {
-        throw new Error('Method not implemented.')
+    async createProvider() {
+        return createExternalProvider(this.request.bind(this))
     }
 
-    async createWeb3(options: Web3Options): Promise<Web3> {
-        const provider = new MaskWalletProvider()
-        return provider.createWeb3(options)
+    async createWeb3(): Promise<Web3> {
+        if (this.web3) return this.web3
+        const provider = await this.createProvider()
+        this.web3 = new Web3(provider)
+        return this.web3
     }
 
     async requestAccounts() {
@@ -100,15 +138,5 @@ export class WalletConnectProvider implements Provider {
             connector.on('update', resolve_)
             connector.on('error', reject)
         })
-    }
-
-    async signPersonalMessage(data: string, address: string, password: string) {
-        if (!this.connector) throw new Error('Connection Lost.')
-        return (await this.connector.signPersonalMessage([data, address, password])) as string
-    }
-
-    async sendCustomRequest(payload: IJsonRpcRequest) {
-        if (!this.connector) throw new Error('Connection Lost.')
-        return (await this.connector.sendCustomRequest(payload as IJsonRpcRequest)) as JsonRpcResponse
     }
 }

@@ -21,16 +21,11 @@ export class MaskWalletProvider implements Provider {
         return newInstance
     }
 
-    async createProvider({
-        chainId = currentChainIdSettings.value,
-        url = getChainRPC(chainId, this.seed),
-    }: ProviderOptions) {
-        if (!url) throw new Error('Failed to create provider.')
+    private createProviderInstance(url: string) {
+        const instance = this.providerPool.get(url)
+        if (instance) return instance
 
-        const provider = this.providerPool.get(url)
-        if (provider) return provider
-
-        const newProvider = new Web3.providers.HttpProvider(url, {
+        const newInstance = new Web3.providers.HttpProvider(url, {
             timeout: 30 * 1000, // ms
             // @ts-ignore
             clientConfig: {
@@ -44,8 +39,16 @@ export class MaskWalletProvider implements Provider {
                 onTimeout: true,
             },
         })
-        this.providerPool.set(url, newProvider)
-        return newProvider
+        this.providerPool.set(url, newInstance)
+        return newInstance
+    }
+
+    async createProvider({ chainId, url }: ProviderOptions) {
+        url = url ?? getChainRPC(chainId ?? currentChainIdSettings.value, this.seed)
+        if (!url) throw new Error('Failed to create provider.')
+
+        const provider = this.createProviderInstance(url)
+        return provider
     }
 
     async createWeb3({ keys = [], options = {} }: Web3Options) {
