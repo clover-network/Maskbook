@@ -1,5 +1,5 @@
 import Web3 from 'web3'
-import type { provider as Web3Provider, RequestArguments } from 'web3-core'
+import type { HttpProvider } from 'web3-core'
 import { first } from 'lodash-unified'
 import createMetaMaskProvider, { MetaMaskInpageProvider } from '@dimensiondev/metamask-extension-provider'
 import { ChainId, ProviderType } from '@masknet/web3-shared-evm'
@@ -74,15 +74,14 @@ export class MetaMaskProvider implements Provider {
     async createWeb3() {
         if (this.web3) return this.web3
 
-        const provider = (await this.createProvider()) as Web3Provider
-        this.web3 = new Web3(provider)
-        this.web3.setProvider(provider)
+        const provider = await this.createProvider()
+        this.web3 = new Web3(provider as unknown as HttpProvider)
         return this.web3
     }
 
     async ensureConnectedAndUnlocked() {
-        const web3 = await this.createWeb3()
         try {
+            const web3 = await this.createWeb3()
             const accounts = await web3.eth.requestAccounts()
             throw accounts
         } catch (error: string[] | any) {
