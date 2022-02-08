@@ -35,7 +35,7 @@ export interface Interceptor {
 }
 
 export interface ExternalProvider {
-    request?: (requestArguments: RequestArguments) => Promise<any>
+    request?: <T>(requestArguments: RequestArguments) => Promise<T>
     send?: (
         payload: JsonRpcPayload,
         callback: (error: Error | null, response?: JsonRpcResponse | undefined) => void,

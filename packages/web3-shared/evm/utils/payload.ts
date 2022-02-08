@@ -11,6 +11,10 @@ export function createPayload(id: number, method: string, params: any[]) {
     }
 }
 
+export function getPayloadId(payload: JsonRpcPayload) {
+    return typeof payload.id === 'string' ? Number.parseInt(payload.id, 10) : payload.id
+}
+
 export function getPayloadChainId(payload: JsonRpcPayload) {
     switch (payload.method) {
         // here are methods that contracts may emit
